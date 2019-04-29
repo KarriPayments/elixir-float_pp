@@ -3,12 +3,12 @@ defmodule Float.Mixfile do
 
   def project do
     [app: :float,
-     version: "0.8.0",
-     elixir: "~> 1.0",
+     version: "0.9.0",
+     elixir: "~> 1.8.0",
      build_embedded: Mix.env == :prod,
      start_permanent: Mix.env == :prod,
-     deps: deps,
-     package: package]
+     deps: deps(),
+     package: package()]
   end
 
   # Configuration for the OTP application

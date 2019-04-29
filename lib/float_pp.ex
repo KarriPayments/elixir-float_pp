@@ -51,7 +51,6 @@ defmodule FloatPP do
     "12.3456"
   """
 
-
   @doc """
   Convert a float to the shortest, correctly rounded string that converts to the
   same float when read back with String.to_float
@@ -69,8 +68,12 @@ defmodule FloatPP do
   """
   def to_iodata(float, options \\ %{}) when is_float(float) do
     options = Map.merge(%{compact: false, rounding: :half_even}, options)
-    if not(Map.has_key?(options, :decimals) or Map.has_key?(options, :scientific)), do:
-      options = Map.put(options, :decimals, true)
+
+    options = if not (Map.has_key?(options, :decimals) or Map.has_key?(options, :scientific)) do
+      Map.put(options, :decimals, true)
+    else
+      options
+    end
 
     {digits, place, positive} = FloatPP.Digits.to_digits(float)
 
@@ -84,8 +87,9 @@ defmodule FloatPP do
   # Take our list of integers and convert to a list of strings
   defp stringify({digits, place, positive}) do
     digit_string = digits
-                    |> List.flatten
-                    |> Enum.map(&Integer.to_string/1)
+                   |> List.flatten
+                   |> Enum.map(&Integer.to_string/1)
+
     {digit_string, place, positive}
   end
 
@@ -100,11 +104,11 @@ defmodule FloatPP do
   # compact: false
   # Returns iodata list
   def format_decimal({digits, place, positive}, %{scientific: dp, compact: false}) when is_integer(dp) do
-    [do_format_decimal({digits, 1, positive}, dp), format_exponent(place-1)]
+    [do_format_decimal({digits, 1, positive}, dp), format_exponent(place - 1)]
   end
 
   def format_decimal({digits, place, positive}, %{scientific: _dp}) do
-    [do_format_decimal({digits, 1, positive}, 0), format_exponent(place-1)]
+    [do_format_decimal({digits, 1, positive}, 0), format_exponent(place - 1)]
   end
 
   def format_decimal(digits_t, %{decimals: dp, compact: false}) when is_integer(dp) do
@@ -126,14 +130,17 @@ defmodule FloatPP do
     digit_count = Enum.count(digits)
 
     needed = place + max(1, decimals)
-    if digit_count < needed do
-      digits = digits ++ List.duplicate("0", needed - digit_count)
+    digits = if digit_count < needed do
+      digits ++ List.duplicate("0", needed - digit_count)
+    else
+      digits
     end
 
     # Ensure we have enough zeros on each end to place the "."
-    if place <= 0 do
-      digits = List.duplicate("0", 1 - place) ++ digits
-      place = 1
+    {digits, place} = if place <= 0 do
+      {List.duplicate("0", 1 - place) ++ digits, 1}
+    else
+      {digits, place}
     end
 
     # Split the digits and place the decimal in the correct place
@@ -142,17 +149,13 @@ defmodule FloatPP do
     |> add_negative_sign(positive)
   end
 
-
-  @doc """
-  Format an exponent in float point format
-
-    iex> format_exponent(4)
-      e+04
-    iex> format_exponent(128)
-      e+128
-    iex> format_exponent(-128)
-      e-128
-  """
+  # Format an exponent in float point format
+  #   iex> format_exponent(4)
+  #     e+04
+  #   iex> format_exponent(128)
+  #     e+128
+  #   iex> format_exponent(-128)
+  #     e-128
   defp format_exponent(exp) when (abs(exp) < 10) and (exp >= 0), do: ["e+0", Integer.to_string(exp)]
   defp format_exponent(exp) when (abs(exp) < 10), do: ["e-0", Integer.to_string(-exp)]
   defp format_exponent(exp) when (exp < 0), do: ["e-", Integer.to_string(-exp)]
